@@ -1,6 +1,7 @@
 package author
 
 import (
+	"errors"
 	"example.com/library/utils"
 	"fmt"
 )
@@ -34,4 +35,40 @@ func (s Service) post(author Author) error {
 	)
 	_, err := utils.ExecuteSql(query)
 	return err
+}
+
+func (s Service) update(id int, author Author) error {
+	query := fmt.Sprintf(
+		"update author set last_name='%s', first_name='%s' where id=%d",
+		author.LastName,
+		author.FirstName,
+		id,
+	)
+	_, err := utils.ExecuteSql(query)
+	return err
+}
+
+func (s Service) delete(id int) error {
+	query := fmt.Sprintf("delete from author where id=%d", id)
+	_, err := utils.ExecuteSql(query)
+	return err
+}
+
+func (s Service) getById(id int) (Author, error) {
+	query := fmt.Sprintf("select * from author where id=%d", id)
+	rows, err := utils.ExecuteSql(query)
+	if err != nil {
+		return Author{}, err
+	}
+
+	if !rows.Next() {
+		return Author{}, errors.New("not Found")
+	}
+	var author Author
+	err = rows.Scan(&author.Id, &author.LastName, &author.FirstName)
+	if err != nil {
+		return Author{}, err
+	}
+
+	return author, nil
 }
