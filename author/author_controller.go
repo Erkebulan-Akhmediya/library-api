@@ -8,31 +8,24 @@ import (
 )
 
 func Router() {
-	http.HandleFunc("/author/all", getAll)
-	http.HandleFunc("/author", post)
+	http.HandleFunc("/author/all", Controller{}.getAll)
+	http.HandleFunc("/author", Controller{}.post)
 }
 
-func getAll(w http.ResponseWriter, r *http.Request) {
+type Controller struct {
+	service Service
+}
+
+func (c Controller) getAll(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
 
-	rows, err := utils.ExecuteSql("select * from author")
+	authors, err := c.service.getAll()
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error executing query: %s", err.Error()), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error getting authors: %s", err.Error()), http.StatusInternalServerError)
 		return
-	}
-
-	var authors []Author
-	for rows.Next() {
-		var author Author
-		err = rows.Scan(&author.Id, &author.LastName, &author.FirstName)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error scanning row: %s", err.Error()), http.StatusInternalServerError)
-			return
-		}
-		authors = append(authors, author)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -43,7 +36,7 @@ func getAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func post(w http.ResponseWriter, r *http.Request) {
+func (c Controller) post(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
@@ -56,10 +49,9 @@ func post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := fmt.Sprintf("insert into author (last_name, first_name) values ('%s', '%s')", author.LastName, author.FirstName)
-	_, err = utils.ExecuteSql(query)
+	err = c.service.post(author)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error executing query: %s", err.Error()), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error posting author: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 }
