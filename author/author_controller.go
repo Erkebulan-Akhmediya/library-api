@@ -9,12 +9,11 @@ import (
 	"strconv"
 )
 
-func Router() {
-	r := mux.NewRouter().PathPrefix("/author").Subrouter()
+func Router(router *mux.Router) {
+	r := router.PathPrefix("/author").Subrouter()
+	r.HandleFunc("", Controller{}.post)
 	r.HandleFunc("/all", Controller{}.getAll)
-	r.HandleFunc("/", Controller{}.post)
 	r.HandleFunc("/{id}", Controller{}.authorId)
-	http.Handle("/", r)
 }
 
 type Controller struct {
@@ -88,7 +87,7 @@ func (c Controller) authorId(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else if r.Method == "GET" {
-		author, err := c.service.getById(id)
+		author, err := c.service.GetById(id)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error getting author: %s", err.Error()), http.StatusNotFound)
 			return

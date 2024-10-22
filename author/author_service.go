@@ -54,7 +54,7 @@ func (s Service) delete(id int) error {
 	return err
 }
 
-func (s Service) getById(id int) (Author, error) {
+func (s Service) GetById(id int) (Author, error) {
 	query := fmt.Sprintf("select * from author where id=%d", id)
 	rows, err := utils.ExecuteSql(query)
 	if err != nil {
@@ -62,7 +62,7 @@ func (s Service) getById(id int) (Author, error) {
 	}
 
 	if !rows.Next() {
-		return Author{}, errors.New("not Found")
+		return Author{}, errors.New("author not Found")
 	}
 	var author Author
 	err = rows.Scan(&author.Id, &author.LastName, &author.FirstName)
