@@ -27,14 +27,28 @@ func (s Service) getAll() ([]Author, error) {
 	return authors, nil
 }
 
-func (s Service) post(author Author) error {
+func (s Service) post(author Author) (int, error) {
 	query := fmt.Sprintf(
-		"insert into author (last_name, first_name) values ('%s', '%s')",
+		"insert into author (last_name, first_name) values ('%s', '%s') returning id",
 		author.LastName,
 		author.FirstName,
 	)
-	_, err := utils.ExecuteSql(query)
-	return err
+	res, err := utils.ExecuteSql(query)
+	if err != nil {
+		return -1, err
+	}
+
+	if !res.Next() {
+		return -1, err
+	}
+
+	var id int
+	err = res.Scan(&id)
+	if err != nil {
+		return -1, err
+	}
+
+	return id, nil
 }
 
 func (s Service) update(id int, author Author) error {

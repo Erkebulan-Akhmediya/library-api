@@ -53,9 +53,15 @@ func (c Controller) post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.service.post(author)
+	id, err := c.service.post(author)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error posting author: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = fmt.Fprintf(w, strconv.Itoa(id))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error writing response: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 }

@@ -18,6 +18,7 @@ func Router(router *mux.Router) {
 	r.HandleFunc("", Controller{}.post)
 	r.HandleFunc("/all", Controller{}.getAll)
 	r.HandleFunc("/{id}", Controller{}.bookId)
+	r.HandleFunc("/all/author/{author_id}", Controller{}.getAllByAuthorId)
 }
 
 func (c Controller) post(w http.ResponseWriter, r *http.Request) {
@@ -33,9 +34,15 @@ func (c Controller) post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.service.post(book)
+	id, err := c.service.post(book)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error posting book: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	_, err = fmt.Fprintf(w, strconv.Itoa(id))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error writing response: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 }
@@ -71,7 +78,11 @@ func (c Controller) bookId(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		book, err := c.service.getById(id)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error getting book: %s", err.Error()), http.StatusInternalServerError)
+			status := http.StatusInternalServerError
+			if err.Error() == "book not found" {
+				status = http.StatusNotFound
+			}
+			http.Error(w, fmt.Sprintf("Error getting book: %s", err.Error()), status)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -101,6 +112,28 @@ func (c Controller) bookId(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+}
+
+func (c Controller) getAllByAuthorId(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	authorId, err := strconv.Atoi(vars["author_id"])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error parsing author id: %s", err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	books, err := c.service.getAllByAuthorId(authorId)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error getting books: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(books)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error encoding books: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 }

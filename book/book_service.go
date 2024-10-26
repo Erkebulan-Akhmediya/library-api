@@ -11,20 +11,34 @@ type Service struct {
 	authorService author.Service
 }
 
-func (s Service) post(book Book) error {
+func (s Service) post(book Book) (int, error) {
 	_, err := s.authorService.GetById(book.AuthorId)
 	if err != nil {
-		return err
+		return -1, err
 	}
 
 	query := fmt.Sprintf(
-		"insert into book (name, year, author_id) values ('%s', %d, %d)",
+		"insert into book (name, year, author_id) values ('%s', %d, %d) returning id",
 		book.Name,
 		book.Year,
 		book.AuthorId,
 	)
-	_, err = utils.ExecuteSql(query)
-	return err
+	res, err := utils.ExecuteSql(query)
+	if err != nil {
+		return -1, err
+	}
+
+	if !res.Next() {
+		return -1, errors.New("could not create book")
+	}
+
+	var id int
+	err = res.Scan(&id)
+	if err != nil {
+		return -1, err
+	}
+
+	return id, nil
 }
 
 func (s Service) getAll() ([]Book, error) {
@@ -84,4 +98,24 @@ func (s Service) delete(id int) error {
 	query := fmt.Sprintf("delete from book where id=%d", id)
 	_, err := utils.ExecuteSql(query)
 	return err
+}
+
+func (s Service) getAllByAuthorId(authorId int) ([]Book, error) {
+	query := fmt.Sprintf("select * from book where author_id=%d", authorId)
+	rows, err := utils.ExecuteSql(query)
+	if err != nil {
+		return nil, err
+	}
+
+	var books []Book
+	for rows.Next() {
+		var book Book
+		err := rows.Scan(&book.Id, &book.Name, &book.Year, &book.AuthorId)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, book)
+	}
+
+	return books, nil
 }
